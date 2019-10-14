@@ -51,7 +51,6 @@ with tf.Session() as sess:
         capacity=4 * nrof_preprocess_threads * batch_size,
         allow_smaller_final_batch=True)
 	# shapes=[(160, 160, 3), (1)],
-	print("123")
 	image_batch, label_batch = sess.run([image_batch, label_batch])
 	
 	
