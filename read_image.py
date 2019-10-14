@@ -44,8 +44,7 @@ with tf.Session() as sess:
 	# 	filenames_tensor, labels_tensor = input_queue.dequeue_many(batch_size)
 	# 	filenames, labels = sess.run([filenames_tensor, labels_tensor])
 	# 	filenames = np.squeeze(filenames)
-	images_and_labels_list = preprocess.create_input_pipeline(input_queue, nrof_preprocess_threads, image_size=image_size, 
-																	batch_size=batch_size, rotate=False, crop=True, flip=True, standardization=False)
+	images_and_labels_list = preprocess.create_input_pipeline(input_queue, nrof_preprocess_threads, image_size=image_size, batch_size=batch_size, rotate=False, crop=True, flip=True, standardization=False)
 	image_batch, label_batch = tf.train.batch_join(
         images_and_labels_list, batch_size=batch_size,
         capacity=4 * nrof_preprocess_threads * batch_size,
