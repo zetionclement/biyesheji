@@ -6,6 +6,19 @@ from scipy import misc
 from scipy import interpolate
 from tensorflow.python.framework import ops
 
+
+def center_loss(features, label, alfa, nrof_classes):
+    nrof_features = features.get_shape()[1]
+    centers = tf.get_variable('centers', [nrof_classes,nrof_features], dtype=tf.float32,
+                              initializer=tf.constant_initializer(0), trainable=False)
+    label = tf.reshape(label,[-1])
+    centers_batch = tf.gether(centers, label)
+    diff = (1 - alfa) * (centers - features)
+    centers = tf.scatter_sub(centers, label, diff)
+    with tf.control_dependencies([centers]):
+        loss = tf.reduce_mean(tf.square(features - centers_batch))
+    return loss, centers
+
 class ImageClass():
     def __init__(self, name, image_paths):
         self.name = name
