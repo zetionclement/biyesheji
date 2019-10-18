@@ -2,6 +2,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 from scipy import misc
 from scipy import interpolate
 from tensorflow.python.framework import ops
@@ -10,13 +11,12 @@ from tensorflow.python.framework import ops
 def center_loss(features, label, alfa, nrof_classes):
     nrof_features = features.get_shape()[1]
     centers = tf.get_variable('centers', [nrof_classes, nrof_features], dtype=tf.float32,
-                              initializer=tf.constant_initializer(0), trainable=False)
+        initializer=tf.constant_initializer(0), trainable=False)
     label = tf.reshape(label, [-1])
     centers_batch = tf.gather(centers, label)
-    diff = (1 - alfa) * (centers - features)
+    diff = (1 - alfa) * (centers_batch - features)
     centers = tf.scatter_sub(centers, label, diff)
-    with tf.control_dependencies([centers]):
-        loss = tf.reduce_mean(tf.square(features - centers_batch))
+    loss = tf.reduce_mean(tf.square(features - centers_batch))
     return loss, centers
 
 class ImageClass():
@@ -31,17 +31,16 @@ def get_dataset(image_path):
     for person in people:
         if os.path.isdir(os.path.join(images_path_exp, person)):
             images = os.listdir(os.path.join(images_path_exp, person))
-            if len(images) >= 3:
-                images_path = []
-                index_list = generate_random_index(len(images)+1)
-                for index in index_list:
-                    images_path.append(os.path.join(images_path_exp, person, person + '_' + index + '.png'))
-                Image = ImageClass(person, images_path)
-                dataset.append(Image)
+            images_path = []
+            index_list = generate_index(len(images)+1)
+            for index in index_list:
+                images_path.append(os.path.join(images_path_exp, person, person + '_' + index + '.png'))
+            Image = ImageClass(person, images_path)
+            dataset.append(Image)
     return dataset
 
-def generate_random_index(size):
-    random_list = list(random.sample(range(1, size), 3))
+def generate_index(size):
+    random_list = list(range(1, size))
     index_list = [str(i) for i in random_list]
     for i in range(len(index_list)):
         if len(index_list[i]) == 1:
@@ -81,7 +80,6 @@ def create_input_pipeline(input_queue, nrof_preprocess_threads, image_size, batc
                             lambda: tf.identity(image))
             image = tf.cond(tf.cast((standardization == True), tf.bool), lambda: (tf.cast(image, tf.float32) - 127.5)/128.0,
                             lambda: tf.cast(tf.image.per_image_standardization(image), tf.float32))
-            # image = tf.image.resize_images(image,[160, 160])
             image.set_shape((299, 299, 3))
             images.append(image)
         images_and_labels_list.append([images, label])
@@ -90,3 +88,13 @@ def create_input_pipeline(input_queue, nrof_preprocess_threads, image_size, batc
     #                                                capacity=32, enqueue_many=True,
     #                                                shapes=[image_size + (3,), []], allow_smaller_final_batch=True)
     return images_and_labels_list
+
+def moving_average_total_loss(total_loss):
+    loss_average = tf.train.ExponentialMovingAverage(0.9, name='avg')
+    losses = tf.get_collection('losses')
+    total_loss_average_op = loss_average.apply([total_loss] + losses)
+
+    for loss in losses + [total_loss]:
+        loss_average.average(loss)
+
+    return total_loss_average_op

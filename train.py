@@ -9,16 +9,20 @@ from tensorflow.python.framework import ops
 from tensorflow.python.ops import data_flow_ops
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-image_path = "D:/Google Cloud/lfw_mtcnnpy_160/"
+tf.reset_default_graph()
+
+image_path = "/home/dc2-user/biyesheji/lfw_mtcnnpy_160/"
+# image_path = "D:/Google Cloud/lfw_mtcnnpy_160/"
 # image_path = "/content/drive/My Drive/lfw_mtcnnpy_160/"
 
 epoch_size = 1000               # 每个epoch要跑多少个batch
-epoch = 10                      # epoch
+epochs = 100                     # epoch
 image_size = (299, 299)         # 图片的大小
-batch_size = 32                 # 每个batch的大小
-learning_rate = 0.8             # 初始学习率
-decay_steps = 100               # 衰减步数
-decay_rate = 0.9                # 衰减率
+batch_size = 20                 # 每个batch的大小
+learning_rate = 0.001           # 初始学习率
+learning_rate_dcay_epochs = 10  # 经过n个epoch后对学习率进行一次衰减
+decay_steps = learning_rate_dcay_epochs * epoch_size   # 训练decay_steps步后对学习率进行一次衰减
+decay_rate = 0.99                # 衰减率
 bottleneck_layer_size = 512     #最后一层的输出维度
 keep_probability = 0.8          # Dropout参数
 weight_decay = 5e-5             # L2权重正则化参数
@@ -31,8 +35,8 @@ image_path_list, label_list = preprocess.create_image_path_list_and_label_list(d
 
 labels = ops.convert_to_tensor(label_list, dtype=tf.int32)
 size = array_ops.shape(labels)[0]
-index_queue = tf.train.range_input_producer(limit=size, num_epochs=None, shuffle=True, capacity=batch_size)
-index_dequeue_op = index_queue.dequeue_many(batch_size)
+index_queue = tf.train.range_input_producer(limit=size, num_epochs=None, shuffle=True, capacity=32)
+index_dequeue_op = index_queue.dequeue_many(batch_size * epoch_size)
 
 image_paths_placeholder = tf.placeholder(shape=(None, 1), dtype=tf.string, name="image_paths")
 labels_placeholder = tf.placeholder(shape=(None, 1), dtype=tf.int32, name="labels")
@@ -52,7 +56,7 @@ image_batch, label_batch = tf.train.batch_join(images_and_labels_list, batch_siz
                                                capacity=4 * nrof_preprocess_threads * batch_size,
                                                allow_smaller_final_batch=True)
 
-prelogits = inference.inference(image_batch, bottleneck_layer_size=bottleneck_layer_size, keep=keep_probability)
+prelogits = inference.inference(image_batch, bottleneck_layer_size=bottleneck_layer_size, weight_decay=weight_decay, keep=keep_probability)
 logits = slim.fully_connected(prelogits, len(dataset), activation_fn=None,
                               weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
                               weights_regularizer=slim.l2_regularizer(weight_decay), scope='Logits', reuse=False)
@@ -64,49 +68,51 @@ learning_rate = tf.train.exponential_decay(learning_rate, global_step=train_step
                                            decay_rate=decay_rate, staircase=True)
 # tf.summary_scalar('learning_rate', learning_rate)
 
-cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=logits,
-                                                               name="cross_entropy_per_example")
-cross_entropy = tf.reduce_mean(cross_entropy, name='cross_entropy')
-tf.add_to_collection('losses', cross_entropy)
+cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=logits, name="cross_entropy_per_example")
+cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+tf.add_to_collection('losses', cross_entropy_mean)
 
 correct_prediction = tf.cast(tf.equal(tf.argmax(logits, 1), tf.cast(label_batch, tf.int64)), dtype=tf.float32)
 accuracy = tf.reduce_mean(correct_prediction)
 
 regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-total_loss = tf.add_n([cross_entropy] + regularization_losses, name='total_loss')
+total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_loss')
 
-optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=0.1)
-grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
-apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
-with tf.control_dependencies([apply_gradient_op]):
-    train_op = tf.no_op(name='train')
+total_loss_average_op = preprocess.moving_average_total_loss(total_loss)
+with tf.control_dependencies([total_loss_average_op]):
+  train_op = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=0.1).minimize(total_loss,global_step=train_step)
+
+
+# optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=0.1)
+# grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
+# apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
 
 config = tf.ConfigProto()
 config.gpu_options.allocator_type = "BFC"
 with tf.Session(config=config) as sess:
+    tf.global_variables_initializer().run()
     coord = tf.train.Coordinator()
     tf.train.start_queue_runners(coord=coord)
 
-    index_epoch = sess.run(index_dequeue_op)
-    image_path_epoch = np.array(image_path_list)[index_epoch]
-    label_epoch = np.array(label_list)[index_epoch]
-
-    image_path_array = np.expand_dims(image_path_epoch, 1)
-    label_array = np.expand_dims(label_epoch, 1)
-    sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
     # for _ in range(nrof_preprocess_threads):
     # 	filenames_tensor, labels_tensor = input_queue.dequeue_many(batch_size)
     # 	filenames, labels = sess.run([filenames_tensor, labels_tensor])
     # 	filenames = np.squeeze(filenames)
 
     # shapes=[(160, 160, 3), (1)],
-    for step in (0, epoch):
+    for epoch in range(0,epochs):
+        index_epoch = sess.run(index_dequeue_op)
+        image_path_epoch = np.array(image_path_list)[index_epoch]
+        label_epoch = np.array(label_list)[index_epoch]
+
+        image_path_array = np.expand_dims(image_path_epoch, 1)
+        label_array = np.expand_dims(label_epoch, 1)
+        sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
+
         batch_number = 0
+
         while batch_number < epoch_size:
-            print(batch_number)
-            image_batch, label_batch = sess.run([image_batch, label_batch])
-            print(image_batch.shape)
-            print(label_batch.shape)
-            accuracy, _ = sess.run([accuracy, train_op])
-            print(accuracy)
+
+            _, _toal_loss, _accuracy = sess.run([train_op, total_loss, accuracy])
+            print("epoch[%d][%d], total_loss:%.3f"%(epoch, batch_number, _toal_loss))
             batch_number += 1

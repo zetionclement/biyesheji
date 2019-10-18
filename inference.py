@@ -2,10 +2,10 @@ import Inception_ResNet_v2 as ir
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
-def inference(input,bottleneck_layer_size,keep=0.8):
+def inference(input,bottleneck_layer_size,weight_decay,keep=0.8):
     with tf.variable_scope("Inception_ResNet_V2", "Inception_ResNet_V2", reuse=tf.AUTO_REUSE):
-        with slim.arg_scope([slim.conv2d], weights_initializer=slim.initializers.xavier_initializer(),
-                            activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm):
+        with slim.arg_scope([slim.conv2d], weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                            weights_regularizer=slim.l2_regularizer(weight_decay), activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm):
             with tf.name_scope('Stem'):
                 output = ir.Stem(input)
 

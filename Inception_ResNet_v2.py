@@ -50,11 +50,11 @@ def Inception_ResNet_A(input):
 
 def Reduction_A(input):
     with tf.variable_scope("Reduction_A", "Reduction_A", reuse=tf.AUTO_REUSE):
-        net_left = slim.max_pool2d(input, [3, 3], padding="VALID", scope="LeftMaxpool")
+        net_left = slim.max_pool2d(input, [3, 3], 2, padding="VALID", scope="LeftMaxpool")
 
         net_mid = slim.conv2d(input, 384, [3, 3], 2, padding="VALID", scope="MidConv")
 
-        net_right = slim.conv2d(input, 256, [3, 3], scope="RightConv1")
+        net_right = slim.conv2d(input, 256, [1, 1], scope="RightConv1")
         net_right = slim.conv2d(net_right, 256, [3, 3], scope="RightConv2")
         net_right = slim.conv2d(net_right, 384, [3, 3], 2, padding="VALID", scope="RightConv3")
 
@@ -85,7 +85,7 @@ def Inception_ResNet_B(input):
 
 def Reduction_B(input):
     with tf.variable_scope("Reduction_B", "Reduction_B", reuse=tf.AUTO_REUSE):
-        net_left = slim.max_pool2d(input, [3, 3], scope="LeftMaxpool")
+        net_left = slim.max_pool2d(input, [3, 3], 2, padding="VALID", scope="LeftMaxpool")
 
         net_mid_left = slim.conv2d(input, 256, [1, 1], scope="MidLeftConv1")
         net_mid_left = slim.conv2d(net_mid_left, 384, [3, 3], 2, padding="VALID", scope="MidLeftConv2")
