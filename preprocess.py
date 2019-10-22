@@ -95,6 +95,21 @@ def moving_average_total_loss(total_loss):
     total_loss_average_op = loss_average.apply([total_loss] + losses)
 
     for loss in losses + [total_loss]:
-        loss_average.average(loss)
+        tf.summary.scalar(loss.op.name + '(raw)', loss)
+        tf.summary.scalar(loss.op.name, loss_average.average(loss))
 
     return total_loss_average_op
+
+def summary_all_variables_and_gradient(grads_and_vars, trainable_vars_list, moving_average_decay_rate, log_histogram, train_step):
+    if log_histogram:
+        for i, (grad, var) in enumerate(grads_and_vars):
+            if grad is not None:
+                tf.summary.histogram(var.op.name + '/gradients', grad)
+
+        for i, var in enumerate(trainable_vars_list):
+            tf.summary.histogram(var.op.name, var)
+
+    variable_average = tf.train.ExponentialMovingAverage(moving_average_decay_rate, train_step)
+    variable_average_op = variable_average.apply(tf.trainable_variables())
+
+    return variable_average_op

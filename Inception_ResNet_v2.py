@@ -126,9 +126,9 @@ def Avg_pool(input):
         output = slim.avg_pool2d(input, [8, 8], scope="Average_Pooling")
     return output
 
-def Dropout(input,keep=0.8):
+def Dropout(input,is_training,keep=0.8):
     with tf.variable_scope("Dropout", "Dropout", reuse=tf.AUTO_REUSE):
-        output = slim.dropout(input, keep_prob=keep)
+        output = slim.dropout(input, keep_prob=keep, is_training=is_training)
     return output
 
 def Fully_connected(input,bottleneck_layer_size):
