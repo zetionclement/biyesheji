@@ -40,8 +40,8 @@ weight_decay = 5e-5                                                     # L2权�
 center_loss_alfa = 0.95                                                 # 中心损失的中心更新率
 center_loss_factor = 0.5                                                # 中心损失权重
 train_step = tf.Variable(0, trainable=False)                            # 当前训练步数
-pretrained_model_path = "/home/dc2-user/biyesheji/models/"
-pretrained_model = False
+pretrained_model_path = "/home/dc2-user/biyesheji/models/"              # 之前训练的模型的路径
+pretrained_model = False                                                # 是否有已训练过的模型
 
 
 if len(os.listdir(pretrained_model_path)) > 0:
