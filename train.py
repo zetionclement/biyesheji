@@ -44,7 +44,7 @@ pretrained_model_path = "/home/dc2-user/biyesheji/models/"
 pretrained_model = False
 
 
-if os.listdir(pretrained_model_path) > 0:
+if len(os.listdir(pretrained_model_path)) > 0:
 	pretrained_model = True
 	print("Using pretrained model")
 
