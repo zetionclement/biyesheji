@@ -28,7 +28,7 @@ epochs = 350                                                            # epoch
 epoch_size = 1000                                                       # 每个epoch要跑多少个batch
 save_batch = 500                                                        # 每个epoch中要跑多少个batch才保存一次模型
 image_size = (299, 299)                                                 # 图片的大小
-batch_size = 16                                                         # 每个batch的大小
+batch_size = 15                                                         # 每个batch的大小
 learning_rate = 0.001                                                   # 初始学习率
 learning_rate_dcay_epochs = 10                                          # 经过n个epoch后对学习率进行一次衰减
 decay_steps = learning_rate_dcay_epochs * epoch_size                    # 训练decay_steps步后对学习率进行一次衰减
@@ -45,7 +45,6 @@ pretrained_model = False                                                # 是否
 
 
 if len(os.listdir(pretrained_model_path)) > 0:
-	print(len(os.listdir(pretrained_model_path)))
 	pretrained_model = True
 	print("Using pretrained model")
 
