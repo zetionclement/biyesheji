@@ -2,17 +2,18 @@ import Inception_ResNet_v2 as ir
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
-def inference(input,bottleneck_layer_size,weight_decay,keep=0.8,is_training=True):
+def inference(input,bottleneck_layer_size,weight_decay,is_training,keep=0.8):
     with tf.variable_scope("Inception_ResNet_V2", "Inception_ResNet_V2", reuse=tf.AUTO_REUSE):
 
-        with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=is_training):
+        batch_norm_params = {'decay':0.995, 'epsilon':0.001, 'updates_collections':None, 'variables_collections':[tf.GraphKeys.TRAINABLE_VARIABLES],}
 
-            batch_norm_params = {'decay':0.995, 'epsilon':0.001, 'updates_collections':None, 'variables_collections':[tf.GraphKeys.TRAINABLE_VARIABLES],}
+        # slim.l2_regularizer()会被添加到tf.GraphKeys.REGULARIZATION中
+        with slim.arg_scope([slim.conv2d,slim.fully_connected], weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
+                            weights_regularizer=slim.l2_regularizer(weight_decay), activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm,
+                            normalizer_params=batch_norm_params):
 
-            with slim.arg_scope([slim.conv2d,slim.fully_connected], weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
-                                weights_regularizer=slim.l2_regularizer(weight_decay), activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm,
-                                normalizer_params=batch_norm_params):
-
+            with slim.arg_scope([slim.batch_norm, slim.dropout], is_training=is_training):
+                
                 with tf.name_scope('Stem'):
                     output = ir.Stem(input)
 

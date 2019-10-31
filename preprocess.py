@@ -24,7 +24,7 @@ class ImageClass():
         self.name = name
         self.image_paths = image_paths
 
-def get_dataset(image_path):
+def get_dataset(image_path, dataset_type):
     dataset = []
     images_path_exp = os.path.expanduser(image_path)
     people = os.listdir(images_path_exp)
@@ -32,23 +32,39 @@ def get_dataset(image_path):
         if os.path.isdir(os.path.join(images_path_exp, person)):
             images = os.listdir(os.path.join(images_path_exp, person))
             images_path = []
-            index_list = generate_index(len(images)+1)
-            for index in index_list:
-                images_path.append(os.path.join(images_path_exp, person, person + '_' + index + '.png'))
+            index_list = generate_index(len(images)+1, dataset_type)
+            if dataset_type == 'casia':                      # CASIA数据集
+                for index in index_list:
+                    path = os.path.join(images_path_exp, person, index + '.png')
+                    if os.path.exists(path):
+                        images_path.append(path)                   
+            else:                                            # LFW数据集
+                for index in index_list:
+                    path = os.path.join(os.path.join(images_path_exp, person, person + '_' + index + '.png'))
+                    if os.path.exists(path):
+                        images_path.append(path)                   
             Image = ImageClass(person, images_path)
             dataset.append(Image)
     return dataset
 
-def generate_index(size):
+def generate_index(size, dataset_type):
     random_list = list(range(1, size))
     index_list = [str(i) for i in random_list]
-    for i in range(len(index_list)):
-        if len(index_list[i]) == 1:
-            index_list[i] = '000' + index_list[i]
-        elif len(index_list[i]) == 2:
-            index_list[i] = '00' + index_list[i]
-        elif len(index_list[i]) == 3:
-            index_list[i] = '0' + index_list[i]
+    if dataset_type == 'casia':
+        for i in range(len(index_list)):
+            if len(index_list[i]) == 1:
+                index_list[i] = '00' + index_list[i]
+            elif len(index_list[i]) == 2:
+                index_list[i] = '0' + index_list[i]
+    else:
+        for i in range(len(index_list)):
+            if len(index_list[i]) == 1:
+                index_list[i] = '000' + index_list[i]
+            elif len(index_list[i]) == 2:
+                index_list[i] = '00' + index_list[i]
+            elif len(index_list[i]) == 3:
+                index_list[i] = '0' + index_list[i]
+
     return index_list
 
 def create_image_path_list_and_label_list(dataset):
@@ -113,3 +129,15 @@ def summary_all_variables_and_gradient(grads_and_vars, trainable_vars_list, movi
     variable_average_op = variable_average.apply(tf.trainable_variables())
 
     return variable_average_op
+
+def get_learning_rate_from_file(filename, epoch):
+    learning_rate = 0.001
+    with open(filename, 'r') as f:
+        for line in f.readlines():
+            string = line.strip().split(':')
+            e = int(string[0])
+            lr = float(string[1])
+            if e < epoch:
+                learning_rate = lr
+            else:
+                return learning_rate

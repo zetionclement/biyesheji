@@ -15,37 +15,34 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 tf.reset_default_graph()
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--is_training', help='Whether to train or not',type=str,default='True')
-args = parser.parse_args(sys.argv[1:])
 
-image_path = "/home/dc2-user/biyesheji/lfw_mtcnnpy_160/"
-# image_path = "D:/Google Cloud/lfw_mtcnnpy_160/"
-# image_path = "/content/drive/My Drive/lfw_mtcnnpy_160/"
+# image_path = "/home/dc2-user/biyesheji/lfw_mtcnnpy_160/"
+image_path = "/home/dc2-user/biyesheji/casia/casia_maxpy_mtcnnpy_299/"
 
-model_path = "/home/dc2-user/biyesheji/models/"        # 模型保存的路径
-summary_path = "/home/dc2-user/biyesheji/summary/"     # summary保存路径
-log_histogram = True                                   # 是否对weights/bias采用直方图来记录变化
-is_training = bool(args.is_training)                   # 是否训练
-epochs = 90                                            # epoch
-epoch_size = 1000                                      # 每个epoch要跑多少个batch
-save_batch = 100                                       # 每个epoch中要跑多少个batch才保存一次模型
-image_size = (299, 299)                                # 图片的大小
-batch_size = 20                                        # 每个batch的大小
-learning_rate = 0.001                                  # 初始学习率
-learning_rate_dcay_epochs = 10                         # 经过n个epoch后对学习率进行一次衰减
-decay_steps = learning_rate_dcay_epochs * epoch_size   # 训练decay_steps步后对学习率进行一次衰减
-decay_rate = 0.99                                      # 学习率的衰减速度
-moving_average_decay_rate = 0.99                       # 滑动平均衰减率
-bottleneck_layer_size = 512                            # 最后一层的输出维度
-keep_probability = 0.8                                 # Dropout参数
-weight_decay = 5e-5                                    # L2权重正则化参数
-center_loss_alfa = 0.95                                # 中心损失的中心更新率
-center_loss_factor = 0.5                               # 中心损失权重
-train_step = tf.Variable(0, trainable=False)           # 当前训练步数
+model_path = "/home/dc2-user/biyesheji/models/"                         # 模型保存的路径
+summary_base_path = "/home/dc2-user/biyesheji/summary/"                 # summary保存路径
+learning_rate_path = '/home/dc2-user/biyesheji/learning_rate.txt'       # 学习率文件路径
+dataset_type = "casia"                                                  # 人脸数据集类型，可改为casia或者lfw
+log_histogram = True                                                    # 是否对weights/bias采用直方图来记录变化 
+epochs = 350                                                            # epoch
+epoch_size = 1000                                                       # 每个epoch要跑多少个batch
+save_batch = 500                                                        # 每个epoch中要跑多少个batch才保存一次模型
+image_size = (299, 299)                                                 # 图片的大小
+batch_size = 16                                                         # 每个batch的大小
+learning_rate = 0.001                                                   # 初始学习率
+learning_rate_dcay_epochs = 10                                          # 经过n个epoch后对学习率进行一次衰减
+decay_steps = learning_rate_dcay_epochs * epoch_size                    # 训练decay_steps步后对学习率进行一次衰减
+decay_rate = 0.99                                                       # 学习率的衰减速度
+moving_average_decay_rate = 0.99                                        # 滑动平均衰减率
+bottleneck_layer_size = 512                                             # 最后一层的输出维度
+keep_probability = 0.8                                                  # Dropout参数
+weight_decay = 5e-5                                                     # L2权重正则化参数
+center_loss_alfa = 0.95                                                 # 中心损失的中心更新率
+center_loss_factor = 0.5                                                # 中心损失权重
+train_step = tf.Variable(0, trainable=False)                            # 当前训练步数
 
 
-dataset = preprocess.get_dataset(image_path=image_path)
+dataset = preprocess.get_dataset(image_path, dataset_type)
 image_path_list, label_list = preprocess.create_image_path_list_and_label_list(dataset=dataset)
 
 labels = ops.convert_to_tensor(label_list, dtype=tf.int32)
@@ -55,12 +52,12 @@ index_dequeue_op = index_queue.dequeue_many(batch_size * epoch_size)
 
 image_paths_placeholder = tf.placeholder(shape=(None, 1), dtype=tf.string, name="image_paths")
 labels_placeholder = tf.placeholder(shape=(None, 1), dtype=tf.int32, name="labels")
+learning_rate_placeholder = tf.placeholder(dtype=tf.float64, name="learning_rate")
+is_training_placeholder = tf.placeholder(dtype=tf.bool, name="is_training")
 
 nrof_preprocess_threads = 4
-input_queue = data_flow_ops.FIFOQueue(capacity=200000, dtypes=[tf.string, tf.int32], shapes=[(1,), (1,)])
+input_queue = data_flow_ops.FIFOQueue(capacity=2000000, dtypes=[tf.string, tf.int32], shapes=[(1,), (1,)])
 enqueue_op = input_queue.enqueue_many([image_paths_placeholder, labels_placeholder], name="enqueue_op")
-# image_batch, label_batch, filenames = preprocess.create_input_pipeline(input_queue=input_queue, image_size=image_size, batch_size=batch_size,
-#                                                             nrof_preprocess_threads=4, rotate=False, crop=True, flip=True, standardization=False)
 
 images_and_labels_list = preprocess.create_input_pipeline(input_queue, nrof_preprocess_threads,
                                                           image_size=image_size, batch_size=batch_size, rotate=False,
@@ -75,7 +72,7 @@ image_batch = tf.identity(image_batch, name='image_batch')
 image_batch = tf.identity(image_batch, name='input')
 label_batch = tf.identity(label_batch, name='label_batch')
 
-prelogits = inference.inference(image_batch, bottleneck_layer_size=bottleneck_layer_size, weight_decay=weight_decay, keep=keep_probability, is_training=is_training)
+prelogits = inference.inference(image_batch, bottleneck_layer_size=bottleneck_layer_size, weight_decay=weight_decay, is_training=is_training_placeholder, keep=keep_probability)
 logits = slim.fully_connected(prelogits, len(dataset), activation_fn=None,
                               weights_initializer=tf.truncated_normal_initializer(stddev=0.1),
                               weights_regularizer=slim.l2_regularizer(weight_decay), scope='Logits', reuse=False)
@@ -85,7 +82,7 @@ embeddings = tf.nn.l2_normalize(prelogits, 1, 1e-10, name='embeddings')
 prelogits_center_loss, _ = preprocess.center_loss(prelogits, label_batch, center_loss_alfa, len(dataset))
 tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, prelogits_center_loss * center_loss_factor)
 
-learning_rate = tf.train.exponential_decay(learning_rate, global_step=train_step, decay_steps=decay_steps,
+learning_rate = tf.train.exponential_decay(learning_rate_placeholder, global_step=train_step, decay_steps=decay_steps,
                                            decay_rate=decay_rate, staircase=True)
 tf.summary.scalar('learning_rate', learning_rate)
 
@@ -93,8 +90,8 @@ cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batc
 cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
 tf.add_to_collection('losses', cross_entropy_mean)
 
-regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_loss')
+regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)  # regularization_losses包括中心损失和L2权重正则化损失
+total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_loss') # total_loss包括交叉熵和regularization_losses
 
 total_loss_average_op = preprocess.moving_average_total_loss(total_loss)
 
@@ -122,13 +119,13 @@ with tf.Session(config=config) as sess:
     tf.global_variables_initializer().run()
     coord = tf.train.Coordinator()
     tf.train.start_queue_runners(coord=coord)
+    date_time = time.localtime(time.time())
+    summary_save_time = str(date_time.tm_year) + str(date_time.tm_mon) + str(date_time.tm_mday)
+    summary_path = os.path.join(summary_base_path, summary_save_time)
+    if not os.path.exists(summary_path):
+      os.makedirs(summary_path)
     summary_writer = tf.summary.FileWriter(summary_path, sess.graph)
-    # for _ in range(nrof_preprocess_threads):
-    # 	filenames_tensor, labels_tensor = input_queue.dequeue_many(batch_size)
-    # 	filenames, labels = sess.run([filenames_tensor, labels_tensor])
-    # 	filenames = np.squeeze(filenames)
-
-    # shapes=[(160, 160, 3), (1)],
+    
     begin_time = time.localtime(time.time())
 
     for epoch in range(0,epochs):
@@ -138,13 +135,16 @@ with tf.Session(config=config) as sess:
 
         image_path_array = np.expand_dims(image_path_epoch, 1)
         label_array = np.expand_dims(label_epoch, 1)
+
+        lr = preprocess.get_learning_rate_from_file(learning_rate_path, epoch)
         sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
 
         batch_number = 0
 
         while batch_number < epoch_size:
             start_time = time.time()
-            _, _toal_loss, _regular_loss, summary_str, step  = sess.run([train_op, total_loss, regularization_losses, summary_op, train_step])
+            _, _toal_loss, _regular_loss, summary_str, step  = sess.run([train_op, total_loss, regularization_losses, summary_op, train_step], 
+                                                                          feed_dict={learning_rate_placeholder:lr, is_training_placeholder:True})
             duration = time.time() - start_time
             print("epoch[%d][%d], time:%.3f, total_loss:%.3f, regularization_loss:%.3f"%(epoch, batch_number, duration, _toal_loss, np.sum(_regular_loss)))
             summary_writer.add_summary(summary_str, global_step=step)
@@ -153,7 +153,7 @@ with tf.Session(config=config) as sess:
               start_time = time.time()
               current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')
               model_name = os.path.join(model_path,'model-%s.ckpt'%(current_time))
-              saver.save(sess, model_name, global_step=step)
+              saver.save(sess, model_name, global_step=step, write_meta_graph=True)
               duration = time.time() - start_time
               print("Model saved in %.3f seconds"%(duration))
 
@@ -161,3 +161,4 @@ with tf.Session(config=config) as sess:
 
     print("Begin time : %d-%d-%d %d:%d:%d"%(begin_time.tm_year, begin_time.tm_mon, begin_time.tm_mday, begin_time.tm_hour, begin_time.tm_min, begin_time.tm_sec))
     print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec))
+
