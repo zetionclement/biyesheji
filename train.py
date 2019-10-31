@@ -45,6 +45,7 @@ pretrained_model = False                                                # 是否
 
 
 if len(os.listdir(pretrained_model_path)) > 0:
+	print(len(os.listdir(pretrained_model_path)))
 	pretrained_model = True
 	print("Using pretrained model")
 
@@ -57,7 +58,7 @@ index_queue = tf.train.range_input_producer(limit=size, num_epochs=None, shuffle
 index_dequeue_op = index_queue.dequeue_many(batch_size * epoch_size)
 
 image_paths_placeholder = tf.placeholder(shape=(None, 1), dtype=tf.string, name="image_paths")
-labels_placeholder = tf.placeholder(shape=(None, 1), dtype=tf.int32, name="labels")
+labels_placeholder = tf.placeholder(dtype=tf.int32, name="labels")
 learning_rate_placeholder = tf.placeholder(dtype=tf.float64, name="learning_rate")
 is_training_placeholder = tf.placeholder(dtype=tf.bool, name="is_training")
 
