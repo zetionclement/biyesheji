@@ -124,9 +124,9 @@ config.gpu_options.allocator_type = "BFC"
 with tf.Graph().as_default():
 	with tf.Session(config=config) as sess:
 
-		if pretrained_model:
-			print("Restoring pretrained model")
-			saver.restore(sess, pretrained_model_path)
+	    if pretrained_model:
+	        print("Restoring pretrained model")
+	        saver.restore(sess, pretrained_model_path)
 
 	    tf.global_variables_initializer().run()
 	    coord = tf.train.Coordinator()
