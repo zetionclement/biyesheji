@@ -122,56 +122,56 @@ summary_op = tf.summary.merge_all()
 
 config = tf.ConfigProto()
 config.gpu_options.allocator_type = "BFC"
-with tf.Graph().as_default():
-	with tf.Session(config=config) as sess:
 
-	    if pretrained_model:
-	        print("Restoring pretrained model")
-	        saver.restore(sess, pretrained_model_path)
+with tf.Session(config=config) as sess:
 
-	    tf.global_variables_initializer().run()
-	    coord = tf.train.Coordinator()
-	    tf.train.start_queue_runners(coord=coord)
-	    date_time = time.localtime(time.time())
-	    summary_save_time = str(date_time.tm_year) + str(date_time.tm_mon) + str(date_time.tm_mday)
-	    summary_path = os.path.join(summary_base_path, summary_save_time)
-	    if not os.path.exists(summary_path):
-	      os.makedirs(summary_path)
-	    summary_writer = tf.summary.FileWriter(summary_path, sess.graph)
-	    
-	    begin_time = time.localtime(time.time())
+    if pretrained_model:
+        print("Restoring pretrained model")
+        saver.restore(sess, pretrained_model_path)
 
-	    for epoch in range(0,epochs):
-	        index_epoch = sess.run(index_dequeue_op)
-	        image_path_epoch = np.array(image_path_list)[index_epoch]
-	        label_epoch = np.array(label_list)[index_epoch]
+    tf.global_variables_initializer().run()
+    coord = tf.train.Coordinator()
+    tf.train.start_queue_runners(coord=coord)
+    date_time = time.localtime(time.time())
+    summary_save_time = str(date_time.tm_year) + str(date_time.tm_mon) + str(date_time.tm_mday)
+    summary_path = os.path.join(summary_base_path, summary_save_time)
+    if not os.path.exists(summary_path):
+      os.makedirs(summary_path)
+    summary_writer = tf.summary.FileWriter(summary_path, sess.graph)
+    
+    begin_time = time.localtime(time.time())
 
-	        image_path_array = np.expand_dims(image_path_epoch, 1)
-	        label_array = np.expand_dims(label_epoch, 1)
+    for epoch in range(0,epochs):
+        index_epoch = sess.run(index_dequeue_op)
+        image_path_epoch = np.array(image_path_list)[index_epoch]
+        label_epoch = np.array(label_list)[index_epoch]
 
-	        lr = preprocess.get_learning_rate_from_file(learning_rate_path, epoch)
-	        sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
+        image_path_array = np.expand_dims(image_path_epoch, 1)
+        label_array = np.expand_dims(label_epoch, 1)
 
-	        batch_number = 0
+        lr = preprocess.get_learning_rate_from_file(learning_rate_path, epoch)
+        sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
 
-	        while batch_number < epoch_size:
-	            start_time = time.time()
-	            _, _toal_loss, _regular_loss, summary_str, step  = sess.run([train_op, total_loss, regularization_losses, summary_op, train_step], 
-	                                                                          feed_dict={learning_rate_placeholder:lr, is_training_placeholder:True})
-	            duration = time.time() - start_time
-	            print("epoch[%d][%d], time:%.3f, total_loss:%.3f, regularization_loss:%.3f"%(epoch, batch_number, duration, _toal_loss, np.sum(_regular_loss)))
-	            summary_writer.add_summary(summary_str, global_step=step)
-	            batch_number += 1
-	            if batch_number % save_batch == 0 and batch_number > 0:
-	              start_time = time.time()
-	              current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')
-	              model_name = os.path.join(model_path,'model-%s.ckpt'%(current_time))
-	              saver.save(sess, model_name, global_step=step, write_meta_graph=True)
-	              duration = time.time() - start_time
-	              print("Model saved in %.3f seconds"%(duration))
+        batch_number = 0
 
-	    end_time = time.localtime(time.time())
+        while batch_number < epoch_size:
+            start_time = time.time()
+            _, _toal_loss, _regular_loss, summary_str, step  = sess.run([train_op, total_loss, regularization_losses, summary_op, train_step], 
+                                                                          feed_dict={learning_rate_placeholder:lr, is_training_placeholder:True})
+            duration = time.time() - start_time
+            print("epoch[%d][%d], time:%.3f, total_loss:%.3f, regularization_loss:%.3f"%(epoch, batch_number, duration, _toal_loss, np.sum(_regular_loss)))
+            summary_writer.add_summary(summary_str, global_step=step)
+            batch_number += 1
+            if batch_number % save_batch == 0 and batch_number > 0:
+              start_time = time.time()
+              current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')
+              model_name = os.path.join(model_path,'model-%s.ckpt'%(current_time))
+              saver.save(sess, model_name, global_step=step, write_meta_graph=True)
+              duration = time.time() - start_time
+              print("Model saved in %.3f seconds"%(duration))
 
-	    print("Begin time : %d-%d-%d %d:%d:%d"%(begin_time.tm_year, begin_time.tm_mon, begin_time.tm_mday, begin_time.tm_hour, begin_time.tm_min, begin_time.tm_sec))
-	    print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec))
+    end_time = time.localtime(time.time())
+
+    print("Begin time : %d-%d-%d %d:%d:%d"%(begin_time.tm_year, begin_time.tm_mon, begin_time.tm_mday, begin_time.tm_hour, begin_time.tm_min, begin_time.tm_sec))
+    print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec))
 
