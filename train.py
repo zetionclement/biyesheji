@@ -124,9 +124,15 @@ config.gpu_options.allocator_type = "BFC"
 
 with tf.Session(config=config) as sess:
 
+    epoch_start = 0
+    batch_number_start = 0
+
     if pretrained_model:
         print("Restoring pretrained model")
-        model_file = tf.train.get_checkpoint_state(pretrained_model_path).model_checkpoint_path   
+        model_file = tf.train.get_checkpoint_state(pretrained_model_path).model_checkpoint_path
+        current_step = model_file.split('/')[-1].split('.')[1].split('-')[1]
+        epoch_start = int(current_step) // 1000
+        batch_number_start = int(current_step) % 1000    
         saver.restore(sess, model_file)
 
     tf.global_variables_initializer().run()
@@ -141,7 +147,7 @@ with tf.Session(config=config) as sess:
     
     begin_time = time.localtime(time.time())
 
-    for epoch in range(0,epochs):
+    for epoch in range(epoch_start,epochs):
         index_epoch = sess.run(index_dequeue_op)
         image_path_epoch = np.array(image_path_list)[index_epoch]
         label_epoch = np.array(label_list)[index_epoch]
@@ -152,16 +158,13 @@ with tf.Session(config=config) as sess:
         lr = preprocess.get_learning_rate_from_file(learning_rate_path, epoch)
         sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
 
-        batch_number = 0
-
-        while batch_number < epoch_size:
+        for batch_number in range(batch_number_start, epoch_size):
             start_time = time.time()
             _, _toal_loss, _regular_loss, summary_str, step  = sess.run([train_op, total_loss, regularization_losses, summary_op, train_step], 
                                                                           feed_dict={learning_rate_placeholder:lr, is_training_placeholder:True})
             duration = time.time() - start_time
             print("epoch[%d][%d], time:%.3f, total_loss:%.3f, regularization_loss:%.3f"%(epoch, batch_number, duration, _toal_loss, np.sum(_regular_loss)))
             summary_writer.add_summary(summary_str, global_step=step)
-            batch_number += 1
             if batch_number % save_batch == 0 and batch_number > 0:
               start_time = time.time()
               current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H_%M_%S')
