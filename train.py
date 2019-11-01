@@ -111,7 +111,7 @@ apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_
 
 tf.summary.scalar('loss', total_loss)
 
-variable_average_op = preprocess.summary_all_variables_and_gradient(zip(grads,variables), tf.trainable_variables(), moving_average_decay_rate, 
+variable_average_op = preprocess.summary_all_variables_and_gradient(grads_and_vars, tf.trainable_variables(), moving_average_decay_rate, 
                       log_histogram, train_step)
 
 with tf.control_dependencies([total_loss_average_op, variable_average_op, apply_gradient_op]):
