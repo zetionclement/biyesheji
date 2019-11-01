@@ -102,8 +102,11 @@ total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_
 total_loss_average_op = preprocess.moving_average_total_loss(total_loss)
 
 optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=0.1)
-grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
-apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
+grads, variables = zip(*optimizer.compute_gradients(total_loss, tf.global_variables()))
+grads, global_norm = tf.clip_by_global_norm(grads, 5)
+apply_gradient_op = optimizer.apply_gradients(zip(grads,variables), global_step=train_step)
+# grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
+# apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
 
 tf.summary.scalar('loss', total_loss)
 
@@ -118,6 +121,7 @@ saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=3)
 
 summary_op = tf.summary.merge_all()
 
+assign_op = tf.no_op(name='assign_pretrained_step')
 
 config = tf.ConfigProto()
 config.gpu_options.allocator_type = "BFC"
@@ -130,9 +134,10 @@ with tf.Session(config=config) as sess:
     if pretrained_model:
         print("Restoring pretrained model")
         model_file = tf.train.get_checkpoint_state(pretrained_model_path).model_checkpoint_path
-        current_step = model_file.split('/')[-1].split('.')[1].split('-')[1]
-        epoch_start = int(current_step) // 1000
-        batch_number_start = int(current_step) % 1000    
+        pretrained_step = model_file.split('/')[-1].split('.')[1].split('-')[1]
+        assign_op = tf.assign(train_step, int(pretrained_step))
+        epoch_start = int(pretrained_step) // 1000
+        batch_number_start = int(pretrained_step) % 1000    
         saver.restore(sess, model_file)
 
     tf.global_variables_initializer().run()
@@ -156,7 +161,7 @@ with tf.Session(config=config) as sess:
         label_array = np.expand_dims(label_epoch, 1)
 
         lr = preprocess.get_learning_rate_from_file(learning_rate_path, epoch)
-        sess.run(enqueue_op, feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
+        sess.run([enqueue_op, assign_op], feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
 
         for batch_number in range(batch_number_start, epoch_size):
             start_time = time.time()
