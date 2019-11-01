@@ -103,11 +103,11 @@ total_loss = tf.add_n([cross_entropy_mean] + regularization_losses, name='total_
 total_loss_average_op = preprocess.moving_average_total_loss(total_loss)
 
 optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=0.1)
-grads, variables = zip(*optimizer.compute_gradients(total_loss, tf.global_variables()))
-grads, global_norm = tf.clip_by_global_norm(grads, 5)
-apply_gradient_op = optimizer.apply_gradients(zip(grads,variables), global_step=train_step)
-# grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
-# apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
+# grads, variables = zip(*optimizer.compute_gradients(total_loss, tf.global_variables()))               *********************
+# grads, global_norm = tf.clip_by_global_norm(grads, 5)                                                 ****不使用梯度剪裁****
+# apply_gradient_op = optimizer.apply_gradients(zip(grads,variables), global_step=train_step)           *********************
+grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
+apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
 
 tf.summary.scalar('loss', total_loss)
 
