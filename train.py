@@ -126,7 +126,8 @@ with tf.Session(config=config) as sess:
 
     if pretrained_model:
         print("Restoring pretrained model")
-        saver.restore(sess, pretrained_model_path)
+        model_file = tf.train.get_checkpoint_state(pretrained_model_path).model_checkpoint_path   
+        saver.restore(sess, model_file)
 
     tf.global_variables_initializer().run()
     coord = tf.train.Coordinator()
@@ -163,7 +164,7 @@ with tf.Session(config=config) as sess:
             batch_number += 1
             if batch_number % save_batch == 0 and batch_number > 0:
               start_time = time.time()
-              current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H:%M:%S')
+              current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H_%M_%S')
               model_name = os.path.join(model_path,'model-%s.ckpt'%(current_time))
               saver.save(sess, model_name, global_step=step, write_meta_graph=True)
               duration = time.time() - start_time
