@@ -92,8 +92,9 @@ learning_rate = tf.train.exponential_decay(learning_rate_placeholder, global_ste
                                            decay_rate=decay_rate, staircase=True)
 tf.summary.scalar('learning_rate', learning_rate)
 
-cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=logits, name="cross_entropy_per_example")
+cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=label_batch, logits=tf.clip_by_value(logits, 1e-10, 1.0), name="cross_entropy_per_example")
 cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+
 tf.add_to_collection('losses', cross_entropy_mean)
 
 regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)  # regularization_losses包括中心损失和L2权重正则化损失
