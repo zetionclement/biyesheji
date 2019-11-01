@@ -162,6 +162,7 @@ with tf.Session(config=config) as sess:
         label_array = np.expand_dims(label_epoch, 1)
 
         lr = preprocess.get_learning_rate_from_file(learning_rate_path, epoch)
+        print("learning_rate:" + str(lr))
         sess.run([enqueue_op, assign_op], feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
 
         for batch_number in range(batch_number_start, epoch_size):
