@@ -141,3 +141,4 @@ def get_learning_rate_from_file(filename, epoch):
                 learning_rate = lr
             else:
                 return learning_rate
+        return learning_rate
