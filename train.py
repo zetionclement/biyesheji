@@ -165,7 +165,7 @@ with tf.Session(config=config) as sess:
         print("learning_rate:" + str(lr))
         sess.run([enqueue_op, assign_op], feed_dict={image_paths_placeholder: image_path_array, labels_placeholder: label_array})
 
-        for batch_number in range(batch_number_start, epoch_size):
+        for batch_number in range(batch_number_start, epoch_size + 1):
             start_time = time.time()
             _, _toal_loss, _regular_loss, summary_str, step  = sess.run([train_op, total_loss, regularization_losses, summary_op, train_step], 
                                                                           feed_dict={learning_rate_placeholder:lr, is_training_placeholder:True})
