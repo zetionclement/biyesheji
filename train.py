@@ -183,4 +183,4 @@ with tf.Session(config=config) as sess:
     end_time = time.localtime(time.time())
 
     print("Begin time : %d-%d-%d %d:%d:%d"%(begin_time.tm_year, begin_time.tm_mon, begin_time.tm_mday, begin_time.tm_hour, begin_time.tm_min, begin_time.tm_sec))
-    print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec)
+    print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec))
