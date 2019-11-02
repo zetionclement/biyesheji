@@ -129,8 +129,8 @@ config.gpu_options.allocator_type = "BFC"
 
 with tf.Session(config=config) as sess:
 
-    epoch_start = 0
-    batch_number_start = 0
+    epoch_start = 1
+    batch_number_start = 1
 
     if pretrained_model:
         print("Restoring pretrained model")
@@ -153,7 +153,7 @@ with tf.Session(config=config) as sess:
     
     begin_time = time.localtime(time.time())
 
-    for epoch in range(epoch_start,epochs):
+    for epoch in range(epoch_start,epochs + 1):
         index_epoch = sess.run(index_dequeue_op)
         image_path_epoch = np.array(image_path_list)[index_epoch]
         label_epoch = np.array(label_list)[index_epoch]
@@ -183,5 +183,4 @@ with tf.Session(config=config) as sess:
     end_time = time.localtime(time.time())
 
     print("Begin time : %d-%d-%d %d:%d:%d"%(begin_time.tm_year, begin_time.tm_mon, begin_time.tm_mday, begin_time.tm_hour, begin_time.tm_min, begin_time.tm_sec))
-    print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec))
-
+    print("End time : %d-%d-%d %d:%d:%d"%(end_time.tm_year, end_time.tm_mon, end_time.tm_mday, end_time.tm_hour, end_time.tm_min, end_time.tm_sec)
