@@ -137,8 +137,9 @@ def get_learning_rate_from_file(filename, epoch):
             string = line.strip().split(':')
             e = int(string[0])
             lr = float(string[1])
-            if e < epoch:
+            if e <= epoch:
                 learning_rate = lr
             else:
                 return learning_rate
-        return learning_rate
+    
+    return learning_rate
