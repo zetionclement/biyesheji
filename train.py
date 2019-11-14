@@ -16,15 +16,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.reset_default_graph()
 
 
-# image_path = "/home/dc2-user/biyesheji/lfw_mtcnnpy_160/"
-image_path = "/home/dc2-user/biyesheji/casia/casia_maxpy_mtcnnpy_299/"
+image_path = "/home/dc2-user/biyesheji/lfw_mtcnnpy_160/"
+# image_path = "/home/dc2-user/biyesheji/casia/casia_maxpy_mtcnnpy_299/"
 
-model_path = "/home/dc2-user/biyesheji/models/"                         # 模型保存的路径
+model_path = "/home/dc2-user/biyesheji/models_lfw/"                     # 模型保存的路径
 summary_base_path = "/home/dc2-user/biyesheji/summary/"                 # summary保存路径
 learning_rate_path = '/home/dc2-user/biyesheji/learning_rate.txt'       # 学习率文件路径
-dataset_type = "casia"                                                  # 人脸数据集类型，可改为casia或者lfw
+dataset_type = "lfw"                                                    # 人脸数据集类型，可改为casia或者lfw
 log_histogram = True                                                    # 是否对weights/bias采用直方图来记录变化 
-epochs = 350                                                            # epoch
+epochs = 250                                                            # epoch
 epoch_size = 1000                                                       # 每个epoch要跑多少个batch
 save_batch = 500                                                        # 每个epoch中要跑多少个batch才保存一次模型
 image_size = (299, 299)                                                 # 图片的大小
@@ -40,7 +40,7 @@ weight_decay = 5e-5                                                     # L2权�
 center_loss_alfa = 0.95                                                 # 中心损失的中心更新率
 center_loss_factor = 0.5                                                # 中心损失权重
 train_step = tf.Variable(0, trainable=False)                            # 当前训练步数
-pretrained_model_path = "/home/dc2-user/biyesheji/models/"              # 之前训练的模型的路径
+pretrained_model_path = "/home/dc2-user/biyesheji/models_lfw/"          # 之前训练的模型的路径
 pretrained_model = False                                                # 是否有已训练过的模型
 
 
@@ -104,7 +104,7 @@ total_loss_average_op = preprocess.moving_average_total_loss(total_loss)
 
 optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=0.1)
 # grads, variables = zip(*optimizer.compute_gradients(total_loss, tf.global_variables()))               *********************
-# grads, global_norm = tf.clip_by_global_norm(grads, 5)                                                 ****不使用梯度剪裁****
+# grads, global_norm = tf.clip_by_global_norm(grads, 5)                                                 ****不使用梯度剪裁***
 # apply_gradient_op = optimizer.apply_gradients(zip(grads,variables), global_step=train_step)           *********************
 grads_and_vars = optimizer.compute_gradients(total_loss, tf.global_variables())
 apply_gradient_op = optimizer.apply_gradients(grads_and_vars, global_step=train_step)
@@ -121,7 +121,7 @@ with tf.control_dependencies([total_loss_average_op, variable_average_op, apply_
 saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=3)
 
 summary_op = tf.summary.merge_all()
-
+# summary_op = tf.no_op(name='do_not_write_summary')
 assign_op = tf.no_op(name='assign_pretrained_step')
 
 config = tf.ConfigProto()
@@ -171,8 +171,9 @@ with tf.Session(config=config) as sess:
                                                                           feed_dict={learning_rate_placeholder:lr, is_training_placeholder:True})
             duration = time.time() - start_time
             print("epoch[%d][%d], time:%.3f, total_loss:%.3f, regularization_loss:%.3f"%(epoch, batch_number, duration, _toal_loss, np.sum(_regular_loss)))
-            summary_writer.add_summary(summary_str, global_step=step)
+            # summary_writer.add_summary(summary_str, global_step=step)
             if batch_number % save_batch == 0 and batch_number > 0:
+              summary_writer.add_summary(summary_str,global_step=step)
               start_time = time.time()
               current_time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H_%M_%S')
               model_name = os.path.join(model_path,'model-%s.ckpt'%(current_time))
